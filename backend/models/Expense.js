@@ -81,4 +81,9 @@ const expenseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for better query performance
+expenseSchema.index({ group: 1, createdAt: -1 });
+expenseSchema.index({ paidBy: 1 });
+expenseSchema.index({ 'splits.user': 1 });
+
 module.exports = mongoose.model('Expense', expenseSchema);

@@ -6,7 +6,7 @@ const createGroup = async (req, res) => {
   try {
     console.log('Creating group with data:', req.body);
     console.log('User ID:', req.userId);
-    
+
     const { name, description, memberIds } = req.body;
     const createdBy = req.userId;
 
@@ -54,7 +54,7 @@ const createGroup = async (req, res) => {
     const populatedGroup = await Group.findById(newGroup._id)
       .populate('members', '-password')
       .populate('createdBy', '-password');
-    
+
     console.log('✅ Group populated successfully');
 
     res.status(201).json({ message: 'Group created successfully', group: populatedGroup });
@@ -75,7 +75,13 @@ const getUserGroups = async (req, res) => {
     const groups = await Group.find({ members: req.userId })
       .populate('members', '-password')
       .populate('createdBy', '-password')
-      .populate('expenses');
+      .populate({
+        path: 'expenses',
+        populate: {
+          path: 'paidBy splits.user',
+          select: '-password',
+        },
+      });
 
     res.status(200).json({ groups: groups || [] });
   } catch (error) {

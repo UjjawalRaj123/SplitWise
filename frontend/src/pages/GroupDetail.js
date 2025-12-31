@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { groupAPI, expenseAPI, balanceAPI, authAPI, settlementAPI, paymentAPI } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { Container, Row, Col, Button, Card, Form, Alert, Spinner, Nav, Tab, Badge, Modal, ListGroup, Pagination } from 'react-bootstrap';
+import { Container, Row, Col, Button, Card, Form, Alert, Spinner, Nav, Tab, Badge, Modal, ListGroup } from 'react-bootstrap';
 import { FaTrash, FaPlus, FaMoneyBill, FaUsers, FaExchangeAlt, FaShareAlt } from 'react-icons/fa';
 import '../styles/GroupDetail.css';
 
@@ -23,20 +23,9 @@ const GroupDetail = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState('');
   const [detailsSuccess, setDetailsSuccess] = useState('');
-  const { user: currentUser } = useAuth();
   const [groupSettlements, setGroupSettlements] = useState([]);
   const [settlementsLoading, setSettlementsLoading] = useState(false);
   const [settlementsError, setSettlementsError] = useState('');
-  // Settlements tab state (separate from modal's fetched settlements)
-  const [settlementsTabList, setSettlementsTabList] = useState([]);
-  const [settlementsTabLoading, setSettlementsTabLoading] = useState(false);
-  const [settlementsTabError, setSettlementsTabError] = useState('');
-  const [settlementsTabPage, setSettlementsTabPage] = useState(1);
-  const [settlementsTabPageSize, setSettlementsTabPageSize] = useState(5);
-  const [settlementsFilterUser, setSettlementsFilterUser] = useState('all');
-  const [settlementsFilterMin, setSettlementsFilterMin] = useState('');
-  const [settlementsFilterMax, setSettlementsFilterMax] = useState('');
-  const [settlementsSearch, setSettlementsSearch] = useState('');
 
   useEffect(() => {
     fetchGroupData();
@@ -124,29 +113,6 @@ const GroupDetail = () => {
     }
   };
 
-  // Fetch settlements list for the Settlements tab (client-side pagination + filters)
-  const fetchSettlementsList = async () => {
-    setSettlementsTabLoading(true);
-    setSettlementsTabError('');
-    try {
-      const res = await settlementAPI.getGroupSettlements(id);
-      const data = res.data.settlements || res.data;
-      setSettlementsTabList(data);
-      setSettlementsTabPage(1);
-    } catch (err) {
-      console.error('Failed to fetch settlements list', err);
-      setSettlementsTabError('Failed to load settlements');
-    } finally {
-      setSettlementsTabLoading(false);
-    }
-  };
-
-  // Fetch when user opens the Settlements tab
-  useEffect(() => {
-    if (activeTab === 'settlements') {
-      fetchSettlementsList();
-    }
-  }, [activeTab, id]);
 
   // check for payment success query and confirm
   useEffect(() => {
@@ -179,13 +145,11 @@ const GroupDetail = () => {
     if (!window.confirm('Delete this recorded payment?')) return;
     try {
       await settlementAPI.deleteSettlement(settlementId);
-      // remove from local list
-      setSettlementsTabList(prev => prev.filter(s => s._id !== settlementId));
-      // also refresh modal list
+      // refresh modal list
       setGroupSettlements(prev => prev.filter(s => s._id !== settlementId));
     } catch (err) {
       console.error(err);
-      setSettlementsTabError(err.response?.data?.message || 'Failed to delete settlement');
+      setSettlementsError(err.response?.data?.message || 'Failed to delete settlement');
     }
   };
 
@@ -253,7 +217,15 @@ const GroupDetail = () => {
       {/* Header */}
       <Row className="mb-5">
         <Col md={8}>
-          <h1 className="text-primary fw-bold mb-2">{group.name}</h1>
+          <h1 className="fw-bold mb-2" style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontSize: '2.5rem'
+          }}>
+            {group.name}
+          </h1>
           <p className="text-secondary fs-5">{group.description}</p>
         </Col>
         <Col md={4} className="text-end">
@@ -262,6 +234,23 @@ const GroupDetail = () => {
             size="lg"
             onClick={handleDeleteGroup}
             className="d-flex align-items-center gap-2 ms-auto"
+            style={{
+              background: 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 24px',
+              fontWeight: '600',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            }}
           >
             <FaTrash /> Delete Group
           </Button>
@@ -272,29 +261,152 @@ const GroupDetail = () => {
 
       {/* Tabs */}
       <Tab.Container activeKey={activeTab} onSelect={(k) => setActiveTab(k)}>
-        <Nav variant="tabs" className="mb-4">
+        <Nav variant="tabs" className="mb-4" style={{
+          borderBottom: '2px solid #e0e0e0',
+          gap: '0.5rem'
+        }}>
           <Nav.Item>
-            <Nav.Link eventKey="expenses" className="fw-bold">
+            <Nav.Link
+              eventKey="expenses"
+              className="fw-bold"
+              style={{
+                border: 'none',
+                borderRadius: '10px 10px 0 0',
+                padding: '12px 24px',
+                transition: 'all 0.2s ease',
+                background: activeTab === 'expenses'
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : 'transparent',
+                color: activeTab === 'expenses' ? 'white' : '#667eea',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'expenses') {
+                  e.currentTarget.style.background = 'rgba(102, 126, 234, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'expenses') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
               <FaMoneyBill className="me-2" /> Expenses
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
-            <Nav.Link eventKey="balances" className="fw-bold">
+            <Nav.Link
+              eventKey="balances"
+              className="fw-bold"
+              style={{
+                border: 'none',
+                borderRadius: '10px 10px 0 0',
+                padding: '12px 24px',
+                transition: 'all 0.2s ease',
+                background: activeTab === 'balances'
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : 'transparent',
+                color: activeTab === 'balances' ? 'white' : '#667eea',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'balances') {
+                  e.currentTarget.style.background = 'rgba(102, 126, 234, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'balances') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
               <FaExchangeAlt className="me-2" /> Balances
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
-            <Nav.Link eventKey="payments" className="fw-bold">
+            <Nav.Link
+              eventKey="payments"
+              className="fw-bold"
+              style={{
+                border: 'none',
+                borderRadius: '10px 10px 0 0',
+                padding: '12px 24px',
+                transition: 'all 0.2s ease',
+                background: activeTab === 'payments'
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : 'transparent',
+                color: activeTab === 'payments' ? 'white' : '#667eea',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'payments') {
+                  e.currentTarget.style.background = 'rgba(102, 126, 234, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'payments') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
               <FaMoneyBill className="me-2" /> Payments
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
-            <Nav.Link eventKey="settlements" className="fw-bold">
+            <Nav.Link
+              eventKey="settlements"
+              className="fw-bold"
+              style={{
+                border: 'none',
+                borderRadius: '10px 10px 0 0',
+                padding: '12px 24px',
+                transition: 'all 0.2s ease',
+                background: activeTab === 'settlements'
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : 'transparent',
+                color: activeTab === 'settlements' ? 'white' : '#667eea',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'settlements') {
+                  e.currentTarget.style.background = 'rgba(102, 126, 234, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'settlements') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
               <FaExchangeAlt className="me-2" /> Settlements
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
-            <Nav.Link eventKey="members" className="fw-bold">
+            <Nav.Link
+              eventKey="members"
+              className="fw-bold"
+              style={{
+                border: 'none',
+                borderRadius: '10px 10px 0 0',
+                padding: '12px 24px',
+                transition: 'all 0.2s ease',
+                background: activeTab === 'members'
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : 'transparent',
+                color: activeTab === 'members' ? 'white' : '#667eea',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'members') {
+                  e.currentTarget.style.background = 'rgba(102, 126, 234, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'members') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
               <FaUsers className="me-2" /> Members ({group.members.length})
             </Nav.Link>
           </Nav.Item>
@@ -310,6 +422,25 @@ const GroupDetail = () => {
                   size="lg"
                   onClick={() => setShowExpenseForm(!showExpenseForm)}
                   className="d-flex align-items-center gap-2"
+                  style={{
+                    background: showExpenseForm
+                      ? 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)'
+                      : 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '12px 24px',
+                    fontWeight: '600',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+                  }}
                 >
                   <FaPlus /> {showExpenseForm ? 'Cancel' : 'Add Expense'}
                 </Button>
@@ -401,14 +532,14 @@ const GroupDetail = () => {
             {balances && <BalanceSummary balances={balances} />}
           </Tab.Pane>
 
-          {/* Settlements Tab (all groups) */}
+          {/* Settlements Tab (current group only) */}
           <Tab.Pane eventKey="settlements">
-            <AllGroupsSettlementsTab />
+            <AllGroupsSettlementsTab groupId={id} />
           </Tab.Pane>
 
-          {/* Payments Tab (all groups) */}
+          {/* Payments Tab (current group only) */}
           <Tab.Pane eventKey="payments">
-            <AllGroupsPaymentsTab />
+            <AllGroupsPaymentsTab groupId={id} />
           </Tab.Pane>
 
           {/* Members Tab */}
@@ -476,20 +607,38 @@ const GroupDetail = () => {
               <hr />
               <h6>Splits</h6>
               <ListGroup variant="flush">
-                {expenseDetails.splits && expenseDetails.splits.map((s, idx) => (
-                  <ListGroup.Item key={idx} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div>{s.user?.name || s.user}</div>
-                      {s.user?.email && <small className="text-muted">{s.user.email}</small>}
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <Badge bg="secondary">${s.amount.toFixed(2)}</Badge>
-                      {currentUser && (currentUser.id === (s.user?._id || s.user)) && (
-                        <Button size="sm" variant="success" onClick={() => recordPayment(expenseDetails.paidBy._id || expenseDetails.paidBy, s.amount)}>I Paid</Button>
-                      )}
-                    </div>
-                  </ListGroup.Item>
-                ))}
+                {expenseDetails.splits && expenseDetails.splits.map((s, idx) => {
+                  const userId = s.user?._id || s.user;
+                  const paidById = expenseDetails.paidBy?._id || expenseDetails.paidBy;
+
+                  // Check if this user is the one who paid for the expense
+                  const userPaidExpense = userId === paidById;
+
+                  // Check if this user has paid via settlement (only if they didn't pay originally)
+                  const userHasPaid = !userPaidExpense && groupSettlements.some(settlement =>
+                    (settlement.from?._id === userId || settlement.from === userId) &&
+                    (settlement.to?._id === paidById || settlement.to === paidById) &&
+                    settlement.amount >= s.amount
+                  );
+
+                  // Green if user paid the expense OR has settled via payment
+                  // Red if user hasn't paid
+                  const isPaid = userPaidExpense || userHasPaid;
+
+                  return (
+                    <ListGroup.Item key={idx} className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div>{s.user?.name || s.user}</div>
+                        {s.user?.email && <small className="text-muted">{s.user.email}</small>}
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        <Badge bg={isPaid ? "success" : "danger"}>
+                          ${s.amount.toFixed(2)}
+                        </Badge>
+                      </div>
+                    </ListGroup.Item>
+                  );
+                })}
               </ListGroup>
 
               <div className="mt-3 text-end text-muted">Created: {new Date(expenseDetails.createdAt).toLocaleString()}</div>
@@ -879,11 +1028,12 @@ const PaymentsTab = ({ groupId, groupMembers = [], onPaid }) => {
   }, [groupId, currentUser]);
 
   const loadUserBalance = async () => {
-    if (!currentUser || !currentUser.id) return;
+    const currentUserId = currentUser.id || currentUser._id;
+    if (!currentUser || !currentUserId) return;
     setLoading(true);
     setError('');
     try {
-      const res = await balanceAPI.getUserBalance(groupId, currentUser.id);
+      const res = await balanceAPI.getUserBalance(groupId, currentUserId);
       setUserBalance(res.data);
     } catch (err) {
       console.error(err);
@@ -983,7 +1133,7 @@ const AddMembersSection = ({ groupId, groupMembers, groupCreatorId, onMemberAdde
   const { user: currentUser } = useAuth();
 
   // Check if current user is the group creator
-  const isCreator = currentUser && currentUser.id === groupCreatorId;
+  const isCreator = currentUser && (currentUser.id || currentUser._id) === groupCreatorId;
 
   useEffect(() => {
     if (showForm) {
@@ -1098,115 +1248,111 @@ const AddMembersSection = ({ groupId, groupMembers, groupCreatorId, onMemberAdde
   );
 };
 
-// AllGroupsPaymentsTab - Shows payments across all user's groups
-const AllGroupsPaymentsTab = () => {
+// AllGroupsPaymentsTab - Shows payments for a specific group or all groups
+const AllGroupsPaymentsTab = ({ groupId = null }) => {
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [allGroups, setAllGroups] = useState([]);
-  const [groupsWithPayments, setGroupsWithPayments] = useState([]);
-
-  // Filters
-  const [filterGroup, setFilterGroup] = useState('all');
-  const [filterMinAmount, setFilterMinAmount] = useState('');
-  const [filterMaxAmount, setFilterMaxAmount] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('amount');
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Collapsed groups
-  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  const [allPayments, setAllPayments] = useState([]);
 
   useEffect(() => {
-    fetchAllGroupsPayments();
-  }, [currentUser]);
+    if (currentUser?.id || currentUser?._id) {
+      fetchAllGroupsPayments();
+    } else {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, groupId]);
 
   const fetchAllGroupsPayments = async () => {
-    if (!currentUser || !currentUser.id) return;
+    if (!currentUser || !(currentUser.id || currentUser._id)) return;
 
     setLoading(true);
     setError('');
 
     try {
-      const groupsRes = await groupAPI.getUserGroups();
-      const groups = groupsRes.data.groups || groupsRes.data;
-      setAllGroups(groups);
+      let expenses = [];
+      let settlements = [];
 
-      const groupsWithPaymentsData = [];
-
-      for (const group of groups) {
-        try {
-          const balanceRes = await balanceAPI.getUserBalance(group._id, currentUser.id);
-          const balanceData = balanceRes.data;
-
-          const payments = [];
-          if (balanceData && balanceData.owedBy) {
-            if (typeof balanceData.owedBy === 'object' && !Array.isArray(balanceData.owedBy)) {
-              for (const [creditorId, amount] of Object.entries(balanceData.owedBy)) {
-                if (amount > 0) {
-                  const creditor = group.members.find(m => m._id === creditorId);
-                  payments.push({
-                    creditorId,
-                    creditorName: creditor?.name || 'Unknown',
-                    creditorEmail: creditor?.email || '',
-                    amount: parseFloat(amount),
-                    groupId: group._id,
-                    groupName: group.name,
-                  });
-                }
-              }
-            } else if (Array.isArray(balanceData.owedBy)) {
-              balanceData.owedBy.forEach(item => {
-                if (item.amount > 0) {
-                  payments.push({
-                    creditorId: item.user?._id || item.user,
-                    creditorName: item.user?.name || item.userName || 'Unknown',
-                    creditorEmail: item.user?.email || '',
-                    amount: parseFloat(item.amount),
-                    groupId: group._id,
-                    groupName: group.name,
-                  });
-                }
-              });
-            }
-          }
-
-          if (payments.length > 0) {
-            groupsWithPaymentsData.push({ group, payments });
-          }
-        } catch (err) {
-          console.error(`Failed to fetch balance for group ${group._id}`, err);
-        }
+      if (groupId) {
+        // Fetch data for the specific group
+        const [expensesRes, settlementsRes] = await Promise.all([
+          expenseAPI.getGroupExpenses(groupId),
+          settlementAPI.getGroupSettlements(groupId)
+        ]);
+        expenses = expensesRes.data.expenses || [];
+        settlements = settlementsRes.data.settlements || [];
+      } else {
+        // Fetch all user data across groups
+        const [expensesRes, settlementsRes] = await Promise.all([
+          expenseAPI.getMyExpenses(),
+          settlementAPI.getMySettlements()
+        ]);
+        expenses = expensesRes.data.expenses || [];
+        settlements = settlementsRes.data.settlements || [];
       }
 
-      setGroupsWithPayments(groupsWithPaymentsData);
+      // Extract unpaid expenses where current user owes money
+      const unpaidExpenses = [];
+      expenses.forEach(expense => {
+        // Find current user's split
+        const currentUserId = currentUser.id || currentUser._id;
+        const userSplit = expense.splits?.find(s =>
+          (s.user?._id === currentUserId || s.user === currentUserId)
+        );
+
+        if (!userSplit) return; // User not part of this expense
+
+        // Check if user is the one who paid
+        const userPaid = (expense.paidBy?._id === currentUserId || expense.paidBy === currentUserId);
+        if (userPaid) return; // User paid, so they don't owe
+
+        // Check if user has settled this expense
+        const paidById = expense.paidBy?._id || expense.paidBy;
+        const userHasPaid = settlements.some(settlement =>
+          (settlement.from?._id === currentUserId || settlement.from === currentUserId) &&
+          (settlement.to?._id === paidById || settlement.to === paidById) &&
+          settlement.amount >= userSplit.amount
+        );
+
+        if (userHasPaid) return; // Already paid
+
+        // This is an unpaid expense
+        const payer = expense.paidBy;
+        const group = expense.group;
+
+        unpaidExpenses.push({
+          id: `${expense._id}-${currentUser.id}`,
+          expenseId: expense._id,
+          expenseName: expense.description,
+          expenseCategory: expense.category,
+          amount: userSplit.amount,
+          creditorId: paidById,
+          creditorName: (typeof payer === 'object' ? payer.name : 'Unknown'),
+          creditorEmail: (typeof payer === 'object' ? payer.email : ''),
+          groupId: (typeof group === 'object' ? group._id : (groupId || group)),
+          groupName: (typeof group === 'object' ? group.name : 'Unknown Group'),
+          createdAt: expense.createdAt
+        });
+      });
+
+      // Sort by date (newest first)
+      unpaidExpenses.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setAllPayments(unpaidExpenses);
     } catch (err) {
-      console.error('Failed to fetch groups', err);
+      console.error('Failed to fetch payments', err);
       setError('Failed to load payment data');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleGroupCollapse = (groupId) => {
-    setCollapsedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
-      } else {
-        newSet.add(groupId);
-      }
-      return newSet;
-    });
-  };
 
-  const handlePay = async (groupId, toUserId, amount) => {
+
+  const handlePay = async (payment) => {
     try {
       setLoading(true);
-      const res = await paymentAPI.createCheckoutSession(groupId, toUserId, amount);
+      const res = await paymentAPI.createCheckoutSession(payment.groupId, payment.creditorId, payment.amount);
       const url = res.data.url || res.data.sessionUrl;
       if (url) {
         window.location.href = url;
@@ -1215,88 +1361,13 @@ const AllGroupsPaymentsTab = () => {
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || 'Payment start failed');
+      setError(err.response?.data?.message || 'Payment failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const sharePaymentRequest = async (payment) => {
-    const text = `Please pay ${payment.creditorName} ${payment.creditorEmail ? `(${payment.creditorEmail}) ` : ''}an amount of $${payment.amount.toFixed(2)} for group "${payment.groupName}".`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'Payment Request', text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        alert('Payment request copied to clipboard.');
-      }
-    } catch (err) {
-      console.error('Share failed', err);
-      try {
-        await navigator.clipboard.writeText(text);
-        alert('Payment request copied to clipboard.');
-      } catch (_) {
-        setError('Failed to share or copy payment request');
-      }
-    }
-  };
-
-  const recordPayment = async (groupId, toUserId, amount, paymentInfo) => {
-    try {
-      await settlementAPI.createSettlement(groupId, toUserId, amount, `Payment to ${paymentInfo.creditorName}`);
-      alert('Payment recorded successfully!');
-      fetchAllGroupsPayments();
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Failed to record payment');
-    }
-  };
-
-  const totalOwed = groupsWithPayments.reduce((sum, gwp) =>
-    sum + gwp.payments.reduce((s, p) => s + p.amount, 0), 0
-  );
-  const totalGroups = groupsWithPayments.length;
-
-  const allPayments = groupsWithPayments.flatMap(gwp => gwp.payments);
-
-  const filteredPayments = allPayments.filter(payment => {
-    if (filterGroup !== 'all' && payment.groupId !== filterGroup) return false;
-    if (filterMinAmount && payment.amount < parseFloat(filterMinAmount)) return false;
-    if (filterMaxAmount && payment.amount > parseFloat(filterMaxAmount)) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const searchText = `${payment.creditorName} ${payment.groupName}`.toLowerCase();
-      if (!searchText.includes(q)) return false;
-    }
-    return true;
-  });
-
-  const sortedPayments = [...filteredPayments].sort((a, b) => {
-    if (sortBy === 'amount') return b.amount - a.amount;
-    if (sortBy === 'group') return a.groupName.localeCompare(b.groupName);
-    return 0;
-  });
-
-  const groupedPayments = sortedPayments.reduce((acc, payment) => {
-    if (!acc[payment.groupId]) {
-      acc[payment.groupId] = {
-        groupId: payment.groupId,
-        groupName: payment.groupName,
-        payments: [],
-      };
-    }
-    acc[payment.groupId].payments.push(payment);
-    return acc;
-  }, {});
-
-  const groupedPaymentsArray = Object.values(groupedPayments);
-
-  const totalItems = groupedPaymentsArray.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPageNum = Math.min(currentPage, totalPages);
-  const startIdx = (currentPageNum - 1) * pageSize;
-  const paginatedGroups = groupedPaymentsArray.slice(startIdx, startIdx + pageSize);
+  const totalOwed = allPayments.reduce((sum, p) => sum + p.amount, 0);
 
   if (loading) {
     return (
@@ -1311,238 +1382,118 @@ const AllGroupsPaymentsTab = () => {
     <div>
       {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
 
-      <Card className="mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-        <Card.Body>
-          <Row className="text-center">
-            <Col md={6}>
-              <h6 className="text-white-50">Total You Owe</h6>
-              <h2 className="fw-bold mb-0">${totalOwed.toFixed(2)}</h2>
-            </Col>
-            <Col md={6}>
-              <h6 className="text-white-50">Across Groups</h6>
-              <h2 className="fw-bold mb-0">{totalGroups}</h2>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+      {totalOwed > 0 && (
+        <Card className="mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          <Card.Body className="text-center">
+            <h6 className="text-white-50 mb-2">Total You Owe</h6>
+            <h2 className="fw-bold mb-0">${totalOwed.toFixed(2)}</h2>
+          </Card.Body>
+        </Card>
+      )}
 
-      <Card className="mb-4 shadow-sm">
-        <Card.Header className="bg-light">
-          <h6 className="mb-0">Filters & Search</h6>
-        </Card.Header>
-        <Card.Body>
-          <Row className="g-3">
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Group</Form.Label>
-                <Form.Select size="sm" value={filterGroup} onChange={(e) => { setFilterGroup(e.target.value); setCurrentPage(1); }}>
-                  <option value="all">All Groups</option>
-                  {allGroups.map(g => (
-                    <option key={g._id} value={g._id}>{g.name}</option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Min Amount</Form.Label>
-                <Form.Control size="sm" type="number" step="0.01" placeholder="0.00" value={filterMinAmount} onChange={(e) => { setFilterMinAmount(e.target.value); setCurrentPage(1); }} />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Max Amount</Form.Label>
-                <Form.Control size="sm" type="number" step="0.01" placeholder="0.00" value={filterMaxAmount} onChange={(e) => { setFilterMaxAmount(e.target.value); setCurrentPage(1); }} />
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Search</Form.Label>
-                <Form.Control size="sm" type="text" placeholder="Search by name or group..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Sort By</Form.Label>
-                <Form.Select size="sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="amount">Amount (High to Low)</option>
-                  <option value="group">Group Name</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {paginatedGroups.length === 0 ? (
-        <Alert variant="info" className="text-center">
+      {allPayments.length === 0 ? (
+        <Alert variant="success" className="text-center">
           <h5>🎉 No outstanding payments!</h5>
           <p className="mb-0">You're all settled up.</p>
         </Alert>
       ) : (
-        <>
-          {paginatedGroups.map(groupData => (
-            <Card key={groupData.groupId} className="mb-3 shadow-sm">
-              <Card.Header
-                className="bg-primary text-white d-flex justify-content-between align-items-center"
-                style={{ cursor: 'pointer' }}
-                onClick={() => toggleGroupCollapse(groupData.groupId)}
-              >
-                <h6 className="mb-0">
-                  {collapsedGroups.has(groupData.groupId) ? '▶' : '▼'} {groupData.groupName}
-                </h6>
-                <Badge bg="light" text="dark">
-                  {groupData.payments.length} payment{groupData.payments.length !== 1 ? 's' : ''}
-                </Badge>
-              </Card.Header>
-              {!collapsedGroups.has(groupData.groupId) && (
-                <Card.Body>
-                  <ListGroup variant="flush">
-                    {groupData.payments.map((payment, idx) => {
-                      const initials = payment.creditorName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                      return (
-                        <ListGroup.Item key={idx} className="d-flex justify-content-between align-items-center">
-                          <div className="d-flex align-items-center gap-3">
-                            <div style={{ width: 50, height: 50, borderRadius: 25, background: '#6c757d', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '18px' }}>
-                              {initials}
-                            </div>
-                            <div>
-                              <div><strong>To:</strong> {payment.creditorName}</div>
-                              {payment.creditorEmail && <small className="text-muted">{payment.creditorEmail}</small>}
-                            </div>
-                          </div>
-                          <div className="text-end">
-                            <div className="fw-bold fs-5 text-danger">${payment.amount.toFixed(2)}</div>
-                            <div className="mt-2 d-flex gap-2 justify-content-end">
-                              <Button size="sm" variant="outline-secondary" onClick={() => sharePaymentRequest(payment)} title="Share request">
-                                <FaShareAlt />
-                              </Button>
-                              <Button size="sm" variant="success" onClick={() => recordPayment(payment.groupId, payment.creditorId, payment.amount, payment)}>
-                                Mark Paid
-                              </Button>
-                              <Button size="sm" variant="primary" onClick={() => handlePay(payment.groupId, payment.creditorId, payment.amount)}>
-                                Pay Now
-                              </Button>
-                            </div>
-                          </div>
-                        </ListGroup.Item>
-                      );
-                    })}
-                  </ListGroup>
-                </Card.Body>
-              )}
-            </Card>
-          ))}
-
-          <div className="d-flex justify-content-between align-items-center mt-4">
-            <div className="d-flex align-items-center gap-2">
-              <span className="text-muted">Show:</span>
-              <Form.Select size="sm" style={{ width: 'auto' }} value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </Form.Select>
-              <span className="text-muted">per page</span>
-            </div>
-
-            <div className="text-muted">
-              Showing {startIdx + 1}-{Math.min(startIdx + pageSize, totalItems)} of {totalItems} groups
-            </div>
-
-            <Pagination className="mb-0">
-              <Pagination.First disabled={currentPageNum <= 1} onClick={() => setCurrentPage(1)} />
-              <Pagination.Prev disabled={currentPageNum <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
-              <Pagination.Item active>{currentPageNum}</Pagination.Item>
-              <Pagination.Next disabled={currentPageNum >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} />
-              <Pagination.Last disabled={currentPageNum >= totalPages} onClick={() => setCurrentPage(totalPages)} />
-            </Pagination>
-          </div>
-        </>
+        <Card className="shadow-sm">
+          <Card.Header className="bg-primary text-white">
+            <h6 className="mb-0">{allPayments.length} Payment{allPayments.length !== 1 ? 's' : ''} to Make</h6>
+          </Card.Header>
+          <ListGroup variant="flush">
+            {allPayments.map((payment) => {
+              const initials = payment.creditorName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+              return (
+                <ListGroup.Item key={payment.id} className="py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 25,
+                        background: '#6c757d',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '700',
+                        fontSize: '18px'
+                      }}>
+                        {initials}
+                      </div>
+                      <div>
+                        <div className="fw-bold">{payment.expenseName}</div>
+                        <small className="text-muted">{payment.expenseCategory}</small>
+                        <div><small className="text-muted">Pay to: {payment.creditorName}</small></div>
+                        <div><small className="text-muted">Group: {payment.groupName}</small></div>
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <div className="fw-bold fs-4 text-danger mb-2">${payment.amount.toFixed(2)}</div>
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={() => handlePay(payment)}
+                      >
+                        💳 Pay Now
+                      </Button>
+                    </div>
+                  </div>
+                </ListGroup.Item>
+              );
+            })}
+          </ListGroup>
+        </Card>
       )}
     </div>
   );
 };
 
-// AllGroupsSettlementsTab - Shows settlements across all user's groups
-const AllGroupsSettlementsTab = () => {
+// AllGroupsSettlementsTab - Shows settlements for a specific group or all groups
+const AllGroupsSettlementsTab = ({ groupId = null }) => {
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [allGroups, setAllGroups] = useState([]);
-  const [groupsWithSettlements, setGroupsWithSettlements] = useState([]);
-
-  // Filters
-  const [filterGroup, setFilterGroup] = useState('all');
-  const [filterMember, setFilterMember] = useState('all');
-  const [filterMinAmount, setFilterMinAmount] = useState('');
-  const [filterMaxAmount, setFilterMaxAmount] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('date');
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Collapsed groups
-  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  const [allSettlements, setAllSettlements] = useState([]);
 
   useEffect(() => {
-    fetchAllGroupsSettlements();
-  }, [currentUser]);
+    if (currentUser?.id || currentUser?._id) {
+      fetchAllGroupsSettlements();
+    } else {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, groupId]);
 
   const fetchAllGroupsSettlements = async () => {
-    if (!currentUser || !currentUser.id) return;
+    if (!currentUser || !(currentUser.id || currentUser._id)) return;
 
     setLoading(true);
     setError('');
 
     try {
-      const groupsRes = await groupAPI.getUserGroups();
-      const groups = groupsRes.data.groups || groupsRes.data;
-      setAllGroups(groups);
+      let settlements = [];
 
-      const groupsWithSettlementsData = [];
-
-      for (const group of groups) {
-        try {
-          const settlementsRes = await settlementAPI.getGroupSettlements(group._id);
-          const settlements = settlementsRes.data.settlements || settlementsRes.data || [];
-
-          if (settlements.length > 0) {
-            groupsWithSettlementsData.push({
-              group,
-              settlements: settlements.map(s => ({
-                ...s,
-                groupId: group._id,
-                groupName: group.name,
-              })),
-            });
-          }
-        } catch (err) {
-          console.error(`Failed to fetch settlements for group ${group._id}`, err);
-        }
+      if (groupId) {
+        // Fetch settlements for the specific group
+        const res = await settlementAPI.getGroupSettlements(groupId);
+        settlements = res.data.settlements || res.data || [];
+      } else {
+        // Fetch all user settlements across groups
+        const res = await settlementAPI.getMySettlements();
+        settlements = res.data.settlements || res.data || [];
       }
 
-      setGroupsWithSettlements(groupsWithSettlementsData);
+      // Sort by date (newest first)
+      settlements.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setAllSettlements(settlements);
     } catch (err) {
-      console.error('Failed to fetch groups', err);
+      console.error('Failed to fetch settlements', err);
       setError('Failed to load settlements data');
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleGroupCollapse = (groupId) => {
-    setCollapsedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
-      } else {
-        newSet.add(groupId);
-      }
-      return newSet;
-    });
   };
 
   const handleDeleteSettlement = async (settlementId) => {
@@ -1556,66 +1507,7 @@ const AllGroupsSettlementsTab = () => {
     }
   };
 
-  const allSettlements = groupsWithSettlements.flatMap(gws => gws.settlements);
-
-  const totalSettlements = allSettlements.length;
   const totalAmount = allSettlements.reduce((sum, s) => sum + s.amount, 0);
-
-  const filteredSettlements = allSettlements.filter(settlement => {
-    if (filterGroup !== 'all' && settlement.groupId !== filterGroup) return false;
-    if (filterMember !== 'all') {
-      const fromId = settlement.from?._id || settlement.from;
-      const toId = settlement.to?._id || settlement.to;
-      if (fromId !== filterMember && toId !== filterMember) return false;
-    }
-    if (filterMinAmount && settlement.amount < parseFloat(filterMinAmount)) return false;
-    if (filterMaxAmount && settlement.amount > parseFloat(filterMaxAmount)) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const searchText = `${settlement.note || ''} ${settlement.from?.name || ''} ${settlement.to?.name || ''} ${settlement.groupName}`.toLowerCase();
-      if (!searchText.includes(q)) return false;
-    }
-    return true;
-  });
-
-  const sortedSettlements = [...filteredSettlements].sort((a, b) => {
-    if (sortBy === 'amount') return b.amount - a.amount;
-    if (sortBy === 'group') return a.groupName.localeCompare(b.groupName);
-    if (sortBy === 'date') return new Date(b.createdAt) - new Date(a.createdAt);
-    return 0;
-  });
-
-  const groupedSettlements = sortedSettlements.reduce((acc, settlement) => {
-    if (!acc[settlement.groupId]) {
-      acc[settlement.groupId] = {
-        groupId: settlement.groupId,
-        groupName: settlement.groupName,
-        settlements: [],
-      };
-    }
-    acc[settlement.groupId].settlements.push(settlement);
-    return acc;
-  }, {});
-
-  const groupedSettlementsArray = Object.values(groupedSettlements);
-
-  const totalItems = groupedSettlementsArray.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPageNum = Math.min(currentPage, totalPages);
-  const startIdx = (currentPageNum - 1) * pageSize;
-  const paginatedGroups = groupedSettlementsArray.slice(startIdx, startIdx + pageSize);
-
-  // Get all unique members across all groups
-  const allMembers = [];
-  const memberIds = new Set();
-  allGroups.forEach(group => {
-    group.members.forEach(member => {
-      if (!memberIds.has(member._id)) {
-        memberIds.add(member._id);
-        allMembers.push(member);
-      }
-    });
-  });
 
   if (loading) {
     return (
@@ -1630,157 +1522,97 @@ const AllGroupsSettlementsTab = () => {
     <div>
       {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
 
-      <Card className="mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', color: 'white' }}>
-        <Card.Body>
-          <Row className="text-center">
-            <Col md={6}>
-              <h6 className="text-white-50">Total Settlements</h6>
-              <h2 className="fw-bold mb-0">{totalSettlements}</h2>
-            </Col>
-            <Col md={6}>
-              <h6 className="text-white-50">Total Amount</h6>
-              <h2 className="fw-bold mb-0">${totalAmount.toFixed(2)}</h2>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+      {totalAmount > 0 && (
+        <Card className="mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', color: 'white' }}>
+          <Card.Body className="text-center">
+            <h6 className="text-white-50 mb-2">Total Settled Amount</h6>
+            <h2 className="fw-bold mb-0">${totalAmount.toFixed(2)}</h2>
+            <small className="text-white-50">{allSettlements.length} settlement{allSettlements.length !== 1 ? 's' : ''}</small>
+          </Card.Body>
+        </Card>
+      )}
 
-      <Card className="mb-4 shadow-sm">
-        <Card.Header className="bg-light">
-          <h6 className="mb-0">Filters & Search</h6>
-        </Card.Header>
-        <Card.Body>
-          <Row className="g-3">
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Group</Form.Label>
-                <Form.Select size="sm" value={filterGroup} onChange={(e) => { setFilterGroup(e.target.value); setCurrentPage(1); }}>
-                  <option value="all">All Groups</option>
-                  {allGroups.map(g => (
-                    <option key={g._id} value={g._id}>{g.name}</option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Member</Form.Label>
-                <Form.Select size="sm" value={filterMember} onChange={(e) => { setFilterMember(e.target.value); setCurrentPage(1); }}>
-                  <option value="all">All Members</option>
-                  {allMembers.map(m => (
-                    <option key={m._id} value={m._id}>{m.name}</option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Min Amount</Form.Label>
-                <Form.Control size="sm" type="number" step="0.01" placeholder="0.00" value={filterMinAmount} onChange={(e) => { setFilterMinAmount(e.target.value); setCurrentPage(1); }} />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Max Amount</Form.Label>
-                <Form.Control size="sm" type="number" step="0.01" placeholder="0.00" value={filterMaxAmount} onChange={(e) => { setFilterMaxAmount(e.target.value); setCurrentPage(1); }} />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Sort By</Form.Label>
-                <Form.Select size="sm" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="date">Date (Newest First)</option>
-                  <option value="amount">Amount (High to Low)</option>
-                  <option value="group">Group Name</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
-          <Row className="g-3 mt-1">
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="small fw-bold">Search</Form.Label>
-                <Form.Control size="sm" type="text" placeholder="Search by note, member name, or group..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
-              </Form.Group>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {paginatedGroups.length === 0 ? (
+      {allSettlements.length === 0 ? (
         <Alert variant="info" className="text-center">
-          <h5>No settlements found</h5>
-          <p className="mb-0">Try adjusting your filters or add some settlements.</p>
+          <h5>📭 No settlements found</h5>
+          <p className="mb-0">No payments have been recorded yet.</p>
         </Alert>
       ) : (
-        <>
-          {paginatedGroups.map(groupData => (
-            <Card key={groupData.groupId} className="mb-3 shadow-sm">
-              <Card.Header
-                className="bg-success text-white d-flex justify-content-between align-items-center"
-                style={{ cursor: 'pointer' }}
-                onClick={() => toggleGroupCollapse(groupData.groupId)}
-              >
-                <h6 className="mb-0">
-                  {collapsedGroups.has(groupData.groupId) ? '▶' : '▼'} {groupData.groupName}
-                </h6>
-                <Badge bg="light" text="dark">
-                  {groupData.settlements.length} settlement{groupData.settlements.length !== 1 ? 's' : ''}
-                </Badge>
-              </Card.Header>
-              {!collapsedGroups.has(groupData.groupId) && (
-                <Card.Body>
-                  <ListGroup variant="flush">
-                    {groupData.settlements.map((settlement) => (
-                      <ListGroup.Item key={settlement._id} className="d-flex justify-content-between align-items-center">
+        <Card className="shadow-sm">
+          <Card.Header className="bg-success text-white">
+            <h6 className="mb-0">Recorded Settlements</h6>
+          </Card.Header>
+          <ListGroup variant="flush">
+            {allSettlements.map((settlement) => {
+              const fromInitials = settlement.from?.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
+              const toInitials = settlement.to?.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
+
+              return (
+                <ListGroup.Item key={settlement._id} className="py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          background: '#dc3545',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700',
+                          fontSize: '14px'
+                        }}>
+                          {fromInitials}
+                        </div>
+                        <span className="fw-bold">→</span>
+                        <div style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          background: '#28a745',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700',
+                          fontSize: '14px'
+                        }}>
+                          {toInitials}
+                        </div>
+                      </div>
+                      <div>
                         <div>
-                          <div><strong>{settlement.from?.name || 'Unknown'}</strong> → <strong>{settlement.to?.name || 'Unknown'}</strong></div>
-                          {settlement.note && <small className="text-muted d-block">{settlement.note}</small>}
-                          <small className="text-muted">{new Date(settlement.createdAt).toLocaleString()}</small>
+                          <strong>{settlement.from?.name || 'Unknown'}</strong> paid{' '}
+                          <strong>{settlement.to?.name || 'Unknown'}</strong>
                         </div>
-                        <div className="text-end">
-                          <div className="fw-bold fs-5 text-success">${settlement.amount.toFixed(2)}</div>
-                          <div className="mt-2">
-                            {(currentUser && (currentUser.id === (settlement.recordedBy?._id || settlement.recordedBy))) && (
-                              <Button size="sm" variant="outline-danger" onClick={() => handleDeleteSettlement(settlement._id)}>
-                                <FaTrash /> Delete
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                </Card.Body>
-              )}
-            </Card>
-          ))}
-
-          <div className="d-flex justify-content-between align-items-center mt-4">
-            <div className="d-flex align-items-center gap-2">
-              <span className="text-muted">Show:</span>
-              <Form.Select size="sm" style={{ width: 'auto' }} value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </Form.Select>
-              <span className="text-muted">per page</span>
-            </div>
-
-            <div className="text-muted">
-              Showing {startIdx + 1}-{Math.min(startIdx + pageSize, totalItems)} of {totalItems} groups
-            </div>
-
-            <Pagination className="mb-0">
-              <Pagination.First disabled={currentPageNum <= 1} onClick={() => setCurrentPage(1)} />
-              <Pagination.Prev disabled={currentPageNum <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
-              <Pagination.Item active>{currentPageNum}</Pagination.Item>
-              <Pagination.Next disabled={currentPageNum >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} />
-              <Pagination.Last disabled={currentPageNum >= totalPages} onClick={() => setCurrentPage(totalPages)} />
-            </Pagination>
-          </div>
-        </>
+                        <small className="text-muted">Group: {settlement.group?.name || 'Unknown Group'}</small>
+                        {settlement.note && (
+                          <div><small className="text-muted">Note: {settlement.note}</small></div>
+                        )}
+                        <div><small className="text-muted">{new Date(settlement.createdAt).toLocaleString()}</small></div>
+                      </div>
+                    </div>
+                    <div className="text-end d-flex align-items-center gap-3">
+                      <Badge bg="success" className="fs-5 px-3 py-2">
+                        ${settlement.amount.toFixed(2)}
+                      </Badge>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDeleteSettlement(settlement._id)}
+                        title="Delete settlement"
+                      >
+                        <FaTrash />
+                      </Button>
+                    </div>
+                  </div>
+                </ListGroup.Item>
+              );
+            })}
+          </ListGroup>
+        </Card>
       )}
     </div>
   );

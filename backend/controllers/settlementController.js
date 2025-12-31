@@ -61,6 +61,7 @@ const getGroupSettlements = async (req, res) => {
       .populate('from', '-password')
       .populate('to', '-password')
       .populate('recordedBy', '-password')
+      .populate('group', 'name')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ settlements });
@@ -97,11 +98,12 @@ const getMySettlements = async (req, res) => {
   try {
     const userId = req.userId;
     const settlements = await Settlement.find({
-      $or: [ { from: userId }, { to: userId }, { recordedBy: userId } ]
+      $or: [{ from: userId }, { to: userId }, { recordedBy: userId }]
     })
       .populate('from', '-password')
       .populate('to', '-password')
       .populate('recordedBy', '-password')
+      .populate('group', 'name')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ settlements });

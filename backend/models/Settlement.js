@@ -52,4 +52,9 @@ const settlementSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for better query performance
+settlementSchema.index({ group: 1, createdAt: -1 });
+settlementSchema.index({ from: 1, to: 1 });
+settlementSchema.index({ recordedBy: 1 });
+
 module.exports = mongoose.model('Settlement', settlementSchema);

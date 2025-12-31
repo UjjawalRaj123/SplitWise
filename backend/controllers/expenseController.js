@@ -129,6 +129,7 @@ const getGroupExpenses = async (req, res) => {
       .populate('paidBy', '-password')
       .populate('payments.paidBy', 'name email')
       .populate('splits.user', '-password')
+      .populate('group', 'name')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ expenses });
@@ -304,6 +305,30 @@ const getExpensePayments = async (req, res) => {
   }
 };
 
+// Get all expenses involving current user across all groups
+const getMyExpenses = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const expenses = await Expense.find({
+      $or: [
+        { paidBy: userId },
+        { 'splits.user': userId },
+        { 'payments.paidBy': userId }
+      ]
+    })
+      .populate('paidBy', '-password')
+      .populate('payments.paidBy', 'name email')
+      .populate('splits.user', '-password')
+      .populate('group', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ expenses });
+  } catch (error) {
+    console.error('Error fetching user expenses:', error);
+    res.status(500).json({ message: 'Error fetching expenses', error: error.message });
+  }
+};
+
 module.exports = {
   createExpense,
   getGroupExpenses,
@@ -311,4 +336,5 @@ module.exports = {
   deleteExpense,
   addPaymentToExpense,
   getExpensePayments,
+  getMyExpenses,
 };

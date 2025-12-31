@@ -65,6 +65,8 @@ export const expenseAPI = {
     api.get(`/expenses/group/${groupId}`),
   getExpenseById: (id) => api.get(`/expenses/${id}`),
   deleteExpense: (id) => api.delete(`/expenses/${id}`),
+  // expenses involving current user across groups
+  getMyExpenses: () => api.get('/expenses/me'),
 };
 
 export const balanceAPI = {

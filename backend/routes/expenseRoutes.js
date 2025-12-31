@@ -8,10 +8,12 @@ const {
   deleteExpense,
   addPaymentToExpense,
   getExpensePayments,
+  getMyExpenses,
 } = require('../controllers/expenseController');
 
 // All routes are protected
 router.post('/', authenticate, createExpense);
+router.get('/me', authenticate, getMyExpenses);
 router.get('/group/:groupId', authenticate, getGroupExpenses);
 router.get('/:id', authenticate, getExpenseById);
 router.delete('/:id', authenticate, deleteExpense);

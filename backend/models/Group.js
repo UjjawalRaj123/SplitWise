@@ -30,4 +30,8 @@ const groupSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for better query performance
+groupSchema.index({ members: 1 });
+groupSchema.index({ createdBy: 1 });
+
 module.exports = mongoose.model('Group', groupSchema);

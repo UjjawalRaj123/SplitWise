@@ -45,4 +45,8 @@ userSchema.methods.comparePassword = async function (passwordToCompare) {
   return await bcrypt.compare(passwordToCompare, this.password);
 };
 
+// Indexes for better query performance
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ groups: 1 });
+
 module.exports = mongoose.model('User', userSchema);

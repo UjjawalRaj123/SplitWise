@@ -5,7 +5,10 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    if (!savedUser) return null;
+    const userData = JSON.parse(savedUser);
+    // Normalize to ensure id exists
+    return { ...userData, id: userData.id || userData._id };
   });
 
   const [token, setToken] = useState(() => {
@@ -13,9 +16,14 @@ export const AuthProvider = ({ children }) => {
   });
 
   const login = useCallback((user, token) => {
-    setUser(user);
+    // Normalize user object to ensure it has 'id' property (aliasing _id if necessary)
+    const normalizedUser = {
+      ...user,
+      id: user.id || user._id
+    };
+    setUser(normalizedUser);
     setToken(token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
     localStorage.setItem('token', token);
   }, []);
 
